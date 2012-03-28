@@ -9,6 +9,11 @@
   },
   "main": "chownr.js",
   "devDependencies": {
-    "tap": "0.2"
+    "tap": "0.2",
+    "mkdirp": "0.3",
+    "rimraf": ""
+  },
+  "scripts": {
+    "test": "tap test/*.js"
   }
 }
