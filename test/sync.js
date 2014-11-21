@@ -17,7 +17,7 @@ var exec = require("child_process").exec
 
 exec("id", function (code, output) {
   if (code) throw new Error("failed to run 'id' command")
-  groups = output.trim().split("groups=")[1].split(",").map(function (s) {
+  groups = output.trim().split("=")[3].split(",").map(function (s) {
     return parseInt(s, 10)
   }).filter(function (g) {
     return g !== curGid
