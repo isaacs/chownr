@@ -16,5 +16,5 @@
   "scripts": {
     "test": "tap test/*.js"
   },
-  "license": "BSD"
+  "license": "ISC"
 }
