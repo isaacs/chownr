@@ -25,53 +25,38 @@ exec("id", function (code, output) {
 
   console.error([curUid, groups[0]], "uid, gid")
 
-  rimraf("/tmp/chownr", function (er) {
+  rimraf("dir", function (er) {
     if (er) throw er
-    var cnt = 5
-    for (var i = 0; i < 5; i ++) {
-      mkdirp(getDir(), then)
-    }
-    function then (er) {
-      if (er) throw er
-      if (-- cnt === 0) {
-        runTest()
-      }
-    }
+    fs.mkdirSync("dir")
+    fs.symlinkSync("/bin/sh", "dir/sh-link")
+    runTest()
   })
 })
-
-function getDir () {
-  var x = Math.floor(Math.random() * Math.pow(16,4)).toString(16);
-  var y = Math.floor(Math.random() * Math.pow(16,4)).toString(16);
-  var z = Math.floor(Math.random() * Math.pow(16,4)).toString(16);
-  var dir = "/tmp/chownr/" + [x,y,z].join("/")
-  dirs.push(dir)
-  return dir
-}
 
 function runTest () {
   test("should complete successfully", function (t) {
     console.error("calling chownr", curUid, groups[0], typeof curUid, typeof groups[0])
-    chownr.sync("/tmp/chownr", curUid, groups[0])
-    t.end()
-  })
-
-  dirs.forEach(function (dir) {
-    test("verify "+dir, function (t) {
-      fs.stat(dir, function (er, st) {
-        if (er) {
-          t.ifError(er)
-          return t.end()
-        }
-        t.equal(st.uid, curUid, "uid should be " + curUid)
-        t.equal(st.gid, groups[0], "gid should be "+groups[0])
-        t.end()
-      })
+    chownr("dir", curUid, groups[0], function (er) {
+      t.ifError(er)
+      t.end()
     })
   })
 
+  test("verify "+"sh-link", function (t) {
+     fs.stat("dir/sh-link", function (er, st) {
+      if (er) {
+        t.ifError(er)
+        return t.end()
+      }
+      t.notEqual(st.uid, curUid, "uid not should be " + curUid)
+      t.notEqual(st.gid, groups[0], "gid not should be "+groups[0])
+      t.end()
+    })
+  })
+
+
   test("cleanup", function (t) {
-    rimraf("/tmp/chownr/", function (er) {
+    rimraf("dir", function (er) {
       t.ifError(er)
       t.end()
     })
