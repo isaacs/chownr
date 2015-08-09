@@ -14,12 +14,12 @@ function chownr (p, uid, gid, cb) {
     var len = children.length
     , errState = null
     children.forEach(function (child) {
-      var path_child = path.resolve(p, child);
-      fs.lstat(path_child, function(er, stats) {
+      var pathChild = path.resolve(p, child);
+      fs.lstat(pathChild, function(er, stats) {
         if (er)
           return cb(er)
         if (!stats.isSymbolicLink())
-          chownr(path_child, uid, gid, then)
+          chownr(pathChild, uid, gid, then)
         else
           then()
         })
@@ -43,10 +43,10 @@ function chownrSync (p, uid, gid) {
   if (!children.length) return fs.chownSync(p, uid, gid)
 
   children.forEach(function (child) {
-    var path_child = path.resolve(p, child)
-    var stats = fs.lstatSync(path_child)
+    var pathChild = path.resolve(p, child)
+    var stats = fs.lstatSync(pathChild)
     if (!stats.isSymbolicLink())
-      chownrSync(path_child, uid, gid)
+      chownrSync(pathChild, uid, gid)
   })
   return fs.chownSync(p, uid, gid)
 }

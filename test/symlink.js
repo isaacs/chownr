@@ -23,7 +23,7 @@ exec("id", function (code, output) {
     return g !== curGid
   })
 
-  console.error([curUid, groups[0]], "uid, gid")
+  // console.error([curUid, groups[0]], "uid, gid")
 
   rimraf("dir", function (er) {
     if (er) throw er
@@ -35,7 +35,7 @@ exec("id", function (code, output) {
 
 function runTest () {
   test("should complete successfully", function (t) {
-    console.error("calling chownr", curUid, groups[0], typeof curUid, typeof groups[0])
+    // console.error("calling chownr", curUid, groups[0], typeof curUid, typeof groups[0])
     chownr("dir", curUid, groups[0], function (er) {
       t.ifError(er)
       t.end()
