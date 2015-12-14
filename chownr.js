@@ -37,9 +37,10 @@ const chownrKid = (p, child, uid, gid, cb) => {
 
 const chownr = (p, uid, gid, cb) => {
   readdir(p, { withFileTypes: true }, (er, children) => {
-    // any error other than ENOTDIR means it's not readable, or
-    // doesn't exist.  give up.
-    if (er && er.code !== 'ENOTDIR') return cb(er)
+    // any error other than ENOTDIR or ENOTSUP means it's not readable,
+    // or doesn't exist.  give up.
+    if (er && er.code !== 'ENOTDIR' && er.code !== 'ENOTSUP')
+      return cb(er)
     if (er || !children.length) return fs[LCHOWN](p, uid, gid, cb)
 
     let len = children.length
@@ -72,7 +73,8 @@ const chownrSync = (p, uid, gid) => {
   try {
     children = readdirSync(p, { withFileTypes: true })
   } catch (er) {
-    if (er && er.code === 'ENOTDIR') return fs[LCHOWNSYNC](p, uid, gid)
+    if (er && er.code === 'ENOTDIR' && er.code !== 'ENOTSUP')
+      return fs[LCHOWNSYNC](p, uid, gid)
     throw er
   }
 
