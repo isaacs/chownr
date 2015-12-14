@@ -6,9 +6,9 @@ var fs = require("fs")
 
 function chownr (p, uid, gid, cb) {
   fs.readdir(p, function (er, children) {
-    // any error other than ENOTDIR means it's not readable, or
-    // doesn't exist.  give up.
-    if (er && er.code !== "ENOTDIR") return cb(er)
+    // any error other than ENOTDIR (or ENOTSUP for windows network-share
+    // files) means it's not readable, or doesn't exist.  give up.
+    if (er && er.code !== "ENOTDIR" && er.code !== "ENOTSUP") return cb(er)
     if (er || !children.length) return fs.chown(p, uid, gid, cb)
 
     var len = children.length
