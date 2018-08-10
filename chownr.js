@@ -15,19 +15,12 @@ function chownr (p, uid, gid, cb) {
     , errState = null
     children.forEach(function (child) {
       var pathChild = path.resolve(p, child);
-      fs.lstat(pathChild, function(er, stats) {
-        if (er)
-          return cb(er)
-        if (!stats.isSymbolicLink())
-          chownr(pathChild, uid, gid, then)
-        else
-          then()
-        })
+      chownr(pathChild, uid, gid, then)
     })
     function then (er) {
       if (errState) return
       if (er) return cb(errState = er)
-      if (-- len === 0) return fs.chown(p, uid, gid, cb)
+      if (-- len === 0) return fs.lchown(p, uid, gid, cb)
     }
   })
 }

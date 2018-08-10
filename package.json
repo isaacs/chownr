@@ -19,5 +19,6 @@
   "scripts": {
     "test": "tap test/*.js"
   },
-  "license": "ISC"
+  "license": "ISC",
+  "engines": { "node" : ">=10.6.0" }
 }
