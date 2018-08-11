@@ -7,6 +7,7 @@ services:
   - docker
 
 before_install:
+  - 'docker -v'
   - 'docker pull node:10.8.0-stretch'
 
 script:
@@ -16,5 +17,5 @@ script:
   - 'docker exec --tty "$(cat ${container_id})" nodejs -v'
   - 'docker exec --tty "$(cat ${container_id})" yarnpkg -v'
   - 'docker exec --tty "$(cat ${container_id})" npm -v'
-  - 'docker exec --tty -w /root/chownr "$(cat ${container_id})" yarnpkg install'
-  - 'docker exec --tty -w /root/chownr "$(cat ${container_id})" node_modules/tap/bin/run.js -Rspec test/*.js'
+  - 'docker exec --tty "$(cat ${container_id})" /bin/sh -c "cd /root/chownr && yarnpkg install"'
+  - 'docker exec --tty "$(cat ${container_id})" /bin/sh -c "cd /root/chownr && node_modules/tap/bin/run.js -Rspec test/*.js"'
