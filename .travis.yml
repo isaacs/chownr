@@ -1,3 +1,20 @@
+---
 language: node_js
-node_js:
-  - '10.6.0'
+
+sudo: required
+
+services:
+  - docker
+
+before_install:
+  - 'docker pull node/10.8.0-stretch'
+
+script:
+  - container_id=$(mktemp)
+  - 'docker run --detach --volume="${PWD}":/root/chownr:rw --privileged --volume=/sys/fs/cgroup:/sys/fs/cgroup:ro node/10.8.0-stretch /lib/systemd/systemd > "${container_id}"'
+  - 'docker exec --tty "$(cat ${container_id})" df -h'
+  - 'docker exec --tty "$(cat ${container_id})" nodejs -v'
+  - 'docker exec --tty "$(cat ${container_id})" yarnpkg -v'
+  - 'docker exec --tty "$(cat ${container_id})" npm -v'
+  - 'docker exec --tty "$(cat ${container_id})" -w /root/chownr yarnpkg install'
+  - 'docker exec --tty "$(cat ${container_id})" -w /root/chownr tap test/*.js'
