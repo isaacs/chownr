@@ -1,7 +1,21 @@
-language: node_js
-before_script: npm install -g npm@latest
-node_js:
-  - '0.8'
-  - '0.10'
-  - '0.12'
-  - 'iojs'
+---
+language: generic
+
+sudo: required
+
+services:
+  - docker
+
+before_install:
+  - 'docker -v'
+  - 'docker pull node:10.8.0-stretch'
+
+script:
+  - container_id=$(mktemp)
+  - 'docker run --rm --detach --tty --init --volume="${PWD}":/root/chownr:rw --privileged --volume=/sys/fs/cgroup:/sys/fs/cgroup:ro node:10.8.0-stretch > "${container_id}"'
+  - 'docker exec --tty "$(cat ${container_id})" df -h'
+  - 'docker exec --tty "$(cat ${container_id})" nodejs -v'
+  - 'docker exec --tty "$(cat ${container_id})" yarnpkg -v'
+  - 'docker exec --tty "$(cat ${container_id})" npm -v'
+  - 'docker exec --tty "$(cat ${container_id})" /bin/sh -c "cd /root/chownr && yarnpkg install"'
+  - 'docker exec --tty "$(cat ${container_id})" /bin/sh -c "cd /root/chownr && node_modules/tap/bin/run.js -Rspec test/*.js"'
