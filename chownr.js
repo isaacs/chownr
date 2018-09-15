@@ -7,14 +7,14 @@ const chownr = (p, uid, gid, cb) => {
     // any error other than ENOTDIR means it's not readable, or
     // doesn't exist.  give up.
     if (er && er.code !== 'ENOTDIR') return cb(er)
-    if (er || !children.length) return fs.chown(p, uid, gid, cb)
+    if (er || !children.length) return fs.lchown(p, uid, gid, cb)
 
     let len = children.length
     let errState = null
     const then = er => {
       if (errState) return
       if (er) return cb(errState = er)
-      if (-- len === 0) return fs.chown(p, uid, gid, cb)
+      if (-- len === 0) return fs.lchown(p, uid, gid, cb)
     }
 
     children.forEach(child => {
@@ -36,10 +36,10 @@ const chownrSync = (p, uid, gid) => {
   try {
     children = fs.readdirSync(p)
   } catch (er) {
-    if (er && er.code === 'ENOTDIR') return fs.chownSync(p, uid, gid)
+    if (er && er.code === 'ENOTDIR') return fs.lchownSync(p, uid, gid)
     throw er
   }
-  if (!children.length) return fs.chownSync(p, uid, gid)
+  if (!children.length) return fs.lchownSync(p, uid, gid)
 
   children.forEach(child => {
     const pathChild = path.resolve(p, child)
@@ -48,7 +48,7 @@ const chownrSync = (p, uid, gid) => {
       chownrSync(pathChild, uid, gid)
   })
 
-  return fs.chownSync(p, uid, gid)
+  return fs.lchownSync(p, uid, gid)
 }
 
 module.exports = chownr
