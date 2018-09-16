@@ -12,10 +12,8 @@ const nodeVersion = process.version
 let readdir = (path, options, cb) => fs.readdir(path, options, cb)
 let readdirSync = (path, options) => fs.readdirSync(path, options)
 /* istanbul ignore next */
-if (/^v4\./.test(nodeVersion)) {
+if (/^v4\./.test(nodeVersion))
   readdir = (path, options, cb) => fs.readdir(path, cb)
-  readdirSync = (path, options) => fs.readdirSync(path)
-}
 
 const chownrKid = (p, child, uid, gid, cb) => {
   if (typeof child === 'string')
