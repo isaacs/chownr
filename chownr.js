@@ -9,8 +9,8 @@ var LCHOWNSYNC = fs.lchownSync ? 'lchownSync' : 'chownSync'
 
 // fs.readdir could only accept an options object as of node v6
 var nodeVersion = process.version
-let readdir = (path, options, cb) => fs.readdir(path, options, cb)
-let readdirSync = (path, options) => fs.readdirSync(path, options)
+var readdir = (path, options, cb) => fs.readdir(path, options, cb)
+var readdirSync = (path, options) => fs.readdirSync(path, options)
 /* istanbul ignore next */
 if (/^v4\./.test(nodeVersion))
   readdir = (path, options, cb) => fs.readdir(path, cb)
@@ -43,8 +43,8 @@ var chownr = (p, uid, gid, cb) => {
       return cb(er)
     if (er || !children.length) return fs[LCHOWN](p, uid, gid, cb)
 
-    let len = children.length
-    let errState = null
+    var len = children.length
+    var errState = null
     var then = er => {
       if (errState) return
       if (er) return cb(errState = er)
@@ -69,7 +69,7 @@ var chownrKidSync = (p, child, uid, gid) => {
 }
 
 var chownrSync = (p, uid, gid) => {
-  let children
+  var children
   try {
     children = readdirSync(p, { withFileTypes: true })
   } catch (er) {
