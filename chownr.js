@@ -1,21 +1,21 @@
 'use strict'
-const fs = require('fs')
-const path = require('path')
+var fs = require('fs')
+var path = require('path')
 
 /* istanbul ignore next */
-const LCHOWN = fs.lchown ? 'lchown' : 'chown'
+var LCHOWN = fs.lchown ? 'lchown' : 'chown'
 /* istanbul ignore next */
-const LCHOWNSYNC = fs.lchownSync ? 'lchownSync' : 'chownSync'
+var LCHOWNSYNC = fs.lchownSync ? 'lchownSync' : 'chownSync'
 
 // fs.readdir could only accept an options object as of node v6
-const nodeVersion = process.version
+var nodeVersion = process.version
 let readdir = (path, options, cb) => fs.readdir(path, options, cb)
 let readdirSync = (path, options) => fs.readdirSync(path, options)
 /* istanbul ignore next */
 if (/^v4\./.test(nodeVersion))
   readdir = (path, options, cb) => fs.readdir(path, cb)
 
-const chownrKid = (p, child, uid, gid, cb) => {
+var chownrKid = (p, child, uid, gid, cb) => {
   if (typeof child === 'string')
     return fs.lstat(path.resolve(p, child), (er, stats) => {
       if (er)
@@ -35,7 +35,7 @@ const chownrKid = (p, child, uid, gid, cb) => {
 }
 
 
-const chownr = (p, uid, gid, cb) => {
+var chownr = (p, uid, gid, cb) => {
   readdir(p, { withFileTypes: true }, (er, children) => {
     // any error other than ENOTDIR or ENOTSUP means it's not readable,
     // or doesn't exist.  give up.
@@ -45,7 +45,7 @@ const chownr = (p, uid, gid, cb) => {
 
     let len = children.length
     let errState = null
-    const then = er => {
+    var then = er => {
       if (errState) return
       if (er) return cb(errState = er)
       if (-- len === 0) return fs[LCHOWN](p, uid, gid, cb)
@@ -55,9 +55,9 @@ const chownr = (p, uid, gid, cb) => {
   })
 }
 
-const chownrKidSync = (p, child, uid, gid) => {
+var chownrKidSync = (p, child, uid, gid) => {
   if (typeof child === 'string') {
-    const stats = fs.lstatSync(path.resolve(p, child))
+    var stats = fs.lstatSync(path.resolve(p, child))
     stats.name = child
     child = stats
   }
@@ -68,7 +68,7 @@ const chownrKidSync = (p, child, uid, gid) => {
   fs[LCHOWNSYNC](path.resolve(p, child.name), uid, gid)
 }
 
-const chownrSync = (p, uid, gid) => {
+var chownrSync = (p, uid, gid) => {
   let children
   try {
     children = readdirSync(p, { withFileTypes: true })
