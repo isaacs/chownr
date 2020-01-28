@@ -11,6 +11,24 @@ const needEISDIRHandled = fs.lchown &&
   !process.version.match(/v1[1-9]+\./) &&
   !process.version.match(/v10\.[6-9]/)
 
+const lchownSync = (path, uid, gid) => {
+  try {
+    return fs[LCHOWNSYNC](path, uid, gid)
+  } catch (er) {
+    if (er.code !== 'ENOENT')
+      throw er
+  }
+}
+
+const chownSync = (path, uid, gid) => {
+  try {
+    return fs.chownSync(path, uid, gid)
+  } catch (er) {
+    if (er.code !== 'ENOENT')
+      throw er
+  }
+}
+
 /* istanbul ignore next */
 const handleEISDIR =
   needEISDIRHandled ? (path, uid, gid, cb) => er => {
@@ -28,14 +46,14 @@ const handleEISDIR =
 const handleEISDirSync =
   needEISDIRHandled ? (path, uid, gid) => {
     try {
-      return fs[LCHOWNSYNC](path, uid, gid)
+      return lchownSync(path, uid, gid)
     } catch (er) {
       if (er.code !== 'EISDIR')
         throw er
-      fs.chownSync(path, uid, gid)
+      chownSync(path, uid, gid)
     }
   }
-  : (path, uid, gid) => fs[LCHOWNSYNC](path, uid, gid)
+  : (path, uid, gid) => lchownSync(path, uid, gid)
 
 // fs.readdir could only accept an options object as of node v6
 const nodeVersion = process.version
@@ -45,9 +63,19 @@ let readdirSync = (path, options) => fs.readdirSync(path, options)
 if (/^v4\./.test(nodeVersion))
   readdir = (path, options, cb) => fs.readdir(path, cb)
 
+const chown = (cpath, uid, gid, cb) => {
+  fs[LCHOWN](cpath, uid, gid, handleEISDIR(cpath, uid, gid, er => {
+    // Skip ENOENT error
+    if (er && er.code === 'ENOENT') return cb()
+    cb(er)
+  }))
+}
+
 const chownrKid = (p, child, uid, gid, cb) => {
   if (typeof child === 'string')
     return fs.lstat(path.resolve(p, child), (er, stats) => {
+      // Skip ENOENT error
+      if (er && er.code === 'ENOENT') return cb()
       if (er)
         return cb(er)
       stats.name = child
@@ -59,11 +87,11 @@ const chownrKid = (p, child, uid, gid, cb) => {
       if (er)
         return cb(er)
       const cpath = path.resolve(p, child.name)
-      fs[LCHOWN](cpath, uid, gid, handleEISDIR(cpath, uid, gid, cb))
+      chown(cpath, uid, gid, cb)
     })
   } else {
     const cpath = path.resolve(p, child.name)
-    fs[LCHOWN](cpath, uid, gid, handleEISDIR(cpath, uid, gid, cb))
+    chown(cpath, uid, gid, cb)
   }
 }
 
@@ -74,8 +102,10 @@ const chownr = (p, uid, gid, cb) => {
     // or doesn't exist.  give up.
     if (er && er.code !== 'ENOTDIR' && er.code !== 'ENOTSUP')
       return cb(er)
+    if (er && er.code === 'ENOENT')
+      return cb()
     if (er || !children.length)
-      return fs[LCHOWN](p, uid, gid, handleEISDIR(p, uid, gid, cb))
+      return chown(p, uid, gid, cb)
 
     let len = children.length
     let errState = null
@@ -85,7 +115,7 @@ const chownr = (p, uid, gid, cb) => {
       if (er)
         return cb(errState = er)
       if (-- len === 0)
-        return fs[LCHOWN](p, uid, gid, handleEISDIR(p, uid, gid, cb))
+        return chown(p, uid, gid, cb)
     }
 
     children.forEach(child => chownrKid(p, child, uid, gid, then))
@@ -94,9 +124,14 @@ const chownr = (p, uid, gid, cb) => {
 
 const chownrKidSync = (p, child, uid, gid) => {
   if (typeof child === 'string') {
-    const stats = fs.lstatSync(path.resolve(p, child))
-    stats.name = child
-    child = stats
+    try {
+      const stats = fs.lstatSync(path.resolve(p, child))
+      stats.name = child
+      child = stats
+    } catch (er) {
+      if (er.code === 'ENOENT') return
+      throw er;
+    }
   }
 
   if (child.isDirectory())
@@ -112,6 +147,7 @@ const chownrSync = (p, uid, gid) => {
   } catch (er) {
     if (er && er.code === 'ENOTDIR' && er.code !== 'ENOTSUP')
       return handleEISDirSync(p, uid, gid)
+    if (er && er.code === 'ENOENT') return
     throw er
   }
 
