@@ -2,84 +2,72 @@ if (!process.getuid || !process.getgid) {
   throw new Error("Tests require getuid/getgid support")
 }
 
-var curUid = +process.getuid()
-, curGid = +process.getgid()
-, chownr = require("../")
-, test = require("tap").test
-, mkdirp = require("mkdirp")
-, rimraf = require("rimraf")
-, fs = require("fs")
+const curUid = +process.getuid()
+const curGid = +process.getgid()
+const chownr = require("../")
+const t = require("tap")
+const mkdirp = require("mkdirp")
+const rimraf = require("rimraf")
+const fs = require("fs")
 
 // sniff the 'id' command for other groups that i can legally assign to
-var exec = require("child_process").exec
-, groups
-, dirs = []
+const {exec} = require("child_process")
+let groups
+let dirs = []
 
-exec("id", function (code, output) {
-  if (code) throw new Error("failed to run 'id' command")
-  groups = output.trim().split("=")[3].split(",").map(function (s) {
-    return parseInt(s, 10)
-  }).filter(function (g) {
-    return g !== curGid
-  })
-
-  // console.error([curUid, groups[0]], "uid, gid")
-
-  rimraf("/tmp/chownr", function (er) {
-    if (er) throw er
-    var cnt = 5
-    for (var i = 0; i < 5; i ++) {
-      mkdirp(getDir(), then)
-    }
-    function then (er) {
-      if (er) throw er
-      if (-- cnt === 0) {
-        runTest()
-      }
-    }
+t.test('get the ids to use', { bail: true }, t => {
+  exec("id", function (code, output) {
+    if (code) throw new Error("failed to run 'id' command")
+    groups = output.trim().split("=")[3].split(",")
+      .map(s => parseInt(s, 10))
+      .filter(g => g !== curGid)
+    t.end()
   })
 })
 
-function getDir () {
-  var dir = "/tmp/chownr"
+t.test('run test', t => {
+  const dir = t.testdir({
+    a: { b: { c: {}}},
+    d: { e: { f: {}}},
+    g: { h: { i: {}}},
+    j: { k: { l: {}}},
+    m: { n: { o: {}}},
+  })
 
-  dir += "/" + Math.floor(Math.random() * Math.pow(16,4)).toString(16)
-  dirs.push(dir)
-  dir += "/" + Math.floor(Math.random() * Math.pow(16,4)).toString(16)
-  dirs.push(dir)
-  dir += "/" + Math.floor(Math.random() * Math.pow(16,4)).toString(16)
-  dirs.push(dir)
-  return dir
-}
-
-function runTest () {
-  test("should complete successfully", function (t) {
+  t.test("should complete successfully", t => {
     // console.error("calling chownr", curUid, groups[0], typeof curUid, typeof groups[0])
-    chownr("/tmp/chownr", curUid, groups[0], function (er) {
-      t.ifError(er)
+    chownr(dir, curUid, groups[0], er => {
+      if (er)
+        throw er
       t.end()
     })
   })
 
-  dirs.forEach(function (dir) {
-    test("verify "+dir, function (t) {
-      fs.stat(dir, function (er, st) {
-        if (er) {
-          t.ifError(er)
-          return t.end()
-        }
-        t.equal(st.uid, curUid, "uid should be " + curUid)
-        t.equal(st.gid, groups[0], "gid should be "+groups[0])
-        t.end()
-      })
-    })
-  })
+  const dirs = [
+    '',
+    'a',
+    'a/b',
+    'a/b/c',
+    'd',
+    'd/e',
+    'd/e/f',
+    'g',
+    'g/h',
+    'g/h/i',
+    'j',
+    'j/k',
+    'j/k/l',
+    'm',
+    'm/n',
+    'm/n/o',
+  ]
 
-  test("cleanup", function (t) {
-    rimraf("/tmp/chownr/", function (er) {
-      t.ifError(er)
-      t.end()
+  dirs.forEach(d => t.test(`verify ${d}`, t => {
+    t.match(fs.statSync(`${dir}/${d}`), {
+      uid: curUid,
+      gid: groups[0],
     })
-  })
-}
-
+    t.end()
+  }))
+  t.end()
+})

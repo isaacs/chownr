@@ -7,6 +7,7 @@ const LCHOWN = fs.lchown ? 'lchown' : 'chown'
 /* istanbul ignore next */
 const LCHOWNSYNC = fs.lchownSync ? 'lchownSync' : 'chownSync'
 
+/* istanbul ignore next */
 const needEISDIRHandled = fs.lchown &&
   !process.version.match(/v1[1-9]+\./) &&
   !process.version.match(/v10\.[6-9]/)
@@ -20,6 +21,7 @@ const lchownSync = (path, uid, gid) => {
   }
 }
 
+/* istanbul ignore next */
 const chownSync = (path, uid, gid) => {
   try {
     return fs.chownSync(path, uid, gid)
@@ -66,8 +68,7 @@ if (/^v4\./.test(nodeVersion))
 const chown = (cpath, uid, gid, cb) => {
   fs[LCHOWN](cpath, uid, gid, handleEISDIR(cpath, uid, gid, er => {
     // Skip ENOENT error
-    if (er && er.code === 'ENOENT') return cb()
-    cb(er)
+    cb(er && er.code !== 'ENOENT' ? er : null)
   }))
 }
 
@@ -75,9 +76,8 @@ const chownrKid = (p, child, uid, gid, cb) => {
   if (typeof child === 'string')
     return fs.lstat(path.resolve(p, child), (er, stats) => {
       // Skip ENOENT error
-      if (er && er.code === 'ENOENT') return cb()
       if (er)
-        return cb(er)
+        return cb(er.code !== 'ENOENT' ? er : null)
       stats.name = child
       chownrKid(p, stats, uid, gid, cb)
     })
@@ -100,10 +100,12 @@ const chownr = (p, uid, gid, cb) => {
   readdir(p, { withFileTypes: true }, (er, children) => {
     // any error other than ENOTDIR or ENOTSUP means it's not readable,
     // or doesn't exist.  give up.
-    if (er && er.code !== 'ENOTDIR' && er.code !== 'ENOTSUP')
-      return cb(er)
-    if (er && er.code === 'ENOENT')
-      return cb()
+    if (er) {
+      if (er.code === 'ENOENT')
+        return cb()
+      else if (er.code !== 'ENOTDIR' && er.code !== 'ENOTSUP')
+        return cb(er)
+    }
     if (er || !children.length)
       return chown(p, uid, gid, cb)
 
@@ -129,8 +131,10 @@ const chownrKidSync = (p, child, uid, gid) => {
       stats.name = child
       child = stats
     } catch (er) {
-      if (er.code === 'ENOENT') return
-      throw er;
+      if (er.code === 'ENOENT')
+        return
+      else
+        throw er
     }
   }
 
@@ -145,13 +149,15 @@ const chownrSync = (p, uid, gid) => {
   try {
     children = readdirSync(p, { withFileTypes: true })
   } catch (er) {
-    if (er && er.code === 'ENOTDIR' && er.code !== 'ENOTSUP')
+    if (er.code === 'ENOENT')
+      return
+    else if (er.code === 'ENOTDIR' || er.code === 'ENOTSUP')
       return handleEISDirSync(p, uid, gid)
-    if (er && er.code === 'ENOENT') return
-    throw er
+    else
+      throw er
   }
 
-  if (children.length)
+  if (children && children.length)
     children.forEach(child => chownrKidSync(p, child, uid, gid))
 
   return handleEISDirSync(p, uid, gid)

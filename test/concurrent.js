@@ -2,142 +2,102 @@ if (!process.getuid || !process.getgid) {
   throw new Error("Tests require getuid/getgid support")
 }
 
-var curUid = +process.getuid()
-, curGid = +process.getgid()
-, test = require("tap").test
-, mkdirp = require("mkdirp")
-, rimraf = require("rimraf")
-, fs = require("fs")
-, path = require("path")
+const curUid = +process.getuid()
+const curGid = +process.getgid()
+const chownr = require("../")
+const t = require("tap")
+const mkdirp = require("mkdirp")
+const rimraf = require("rimraf")
+const fs = require("fs")
 
 // sniff the 'id' command for other groups that i can legally assign to
-var exec = require("child_process").exec
-, groups
-, dirs = []
-, files = []
+const {exec} = require("child_process")
+let groups
+let dirs = []
 
-// Monkey-patch fs.readdir to remove f1 before the callback happens
-const readdir = fs.readdir
-
-var chownr = require("../")
-
-exec("id", function (code, output) {
-  if (code) throw new Error("failed to run 'id' command")
-  groups = output.trim().split("=")[3].split(",").map(function (s) {
-    return parseInt(s, 10)
-  }).filter(function (g) {
-    return g !== curGid
-  })
-
-  // console.error([curUid, groups[0]], "uid, gid")
-
-  rimraf("/tmp/chownr", function (er) {
-    if (er) throw er
-    var cnt = 5
-    for (var i = 0; i < 5; i ++) {
-      mkdirp(getDir(), then)
-    }
-    function then (er, made) {
-      if (er) throw er
-      var f1 = path.join(made, "f1");
-      files.push(f1)
-      fs.writeFile(f1, "file-1", er => {
-        if (er) throw er
-        var f2 = path.join(made, "f2");
-        files.push(f2)
-        fs.writeFile(f2, "file-2", er => {
-          if (er) throw er
-          if (-- cnt === 0) {
-            runTest()
-          }
-        })
-      })
-    }
+t.test('get the ids to use', { bail: true }, t => {
+  exec("id", function (code, output) {
+    if (code) throw new Error("failed to run 'id' command")
+    groups = output.trim().split("=")[3].split(",")
+      .map(s => parseInt(s, 10))
+      .filter(g => g !== curGid)
+    t.end()
   })
 })
 
-function getDir () {
-  var dir = "/tmp/chownr"
+t.test('run test', t => {
+  const dir = t.testdir({
+    f1: 'f1',
+    f2: 'f2',
+    d1: {},
+    d2: {},
+    a: { d1: {}, d2: {}, f1: 'f1', f2: 'f2', b: { d1: {}, d2: {}, f1: 'f1', f2: 'f2', c: { d1: {}, d2: {}, f1: 'f1', f2: 'f2' }}},
+    d: { d1: {}, d2: {}, f1: 'f1', f2: 'f2', e: { d1: {}, d2: {}, f1: 'f1', f2: 'f2', f: { d1: {}, d2: {}, f1: 'f1', f2: 'f2' }}},
+    g: { d1: {}, d2: {}, f1: 'f1', f2: 'f2', h: { d1: {}, d2: {}, f1: 'f1', f2: 'f2', i: { d1: {}, d2: {}, f1: 'f1', f2: 'f2' }}},
+    j: { d1: {}, d2: {}, f1: 'f1', f2: 'f2', k: { d1: {}, d2: {}, f1: 'f1', f2: 'f2', l: { d1: {}, d2: {}, f1: 'f1', f2: 'f2' }}},
+    m: { d1: {}, d2: {}, f1: 'f1', f2: 'f2', n: { d1: {}, d2: {}, f1: 'f1', f2: 'f2', o: { d1: {}, d2: {}, f1: 'f1', f2: 'f2' }}},
+  })
 
-  dir += "/" + Math.floor(Math.random() * Math.pow(16,4)).toString(16)
-  dirs.push(dir)
-  dir += "/" + Math.floor(Math.random() * Math.pow(16,4)).toString(16)
-  dirs.push(dir)
-  dir += "/" + Math.floor(Math.random() * Math.pow(16,4)).toString(16)
-  dirs.push(dir)
-  return dir
-}
-
-function runTest () {
-  test("patch fs.readdir", function (t) {
-    // Monkey-patch fs.readdir to remove f1 before the callback happens
-    // This simulates the case where some files are deleted when chownr
-    // is in progress asynchronously
-    fs.readdir = function () {
-      const args = [].slice.call(arguments)
+  t.test("should complete successfully", { bail: true }, t => {
+    const readdir = fs.readdir
+    fs.readdir = (...args) => {
       const cb = args.pop()
-      const dir = args[0]
-      args.push((er, children) => {
-        if (er) return cb(er)
-        fs.unlink(path.join(dir, 'f1'), er => {
-          if (er && er.code === 'ENOENT') return cb(null, children)
-          cb(er, children)
-        });
-      });
-      readdir.apply(fs, args);
+      readdir(...args, (er, children) => {
+        if (er)
+          return cb(er)
+        try { fs.unlinkSync(`${args[0]}/f2`) } catch (_) {}
+        try { fs.rmdirSync(`${args[0]}/d1`) } catch (_) {}
+        try { fs.writeFileSync(`${args[0]}/d1`, 'now a file!') } catch (_) {}
+        try { fs.rmdirSync(`${args[0]}/d2`) } catch (_) {}
+        cb(null, children)
+      })
     }
-    t.end()
-  })
+    t.teardown(() => fs.readdir = readdir)
 
-  test("should complete successfully", function (t) {
-    // console.error("calling chownr", curUid, groups[0], typeof curUid, typeof groups[0])
-    chownr("/tmp/chownr", curUid, groups[0], function (er) {
-      t.ifError(er)
+    chownr(dir, curUid, groups[0], er => {
+      if (er)
+        throw er
       t.end()
     })
   })
 
+  const dirs = [
+    '',
+    'a',
+    'a/b',
+    'a/b/c',
+    'd',
+    'd/e',
+    'd/e/f',
+    'g',
+    'g/h',
+    'g/h/i',
+    'j',
+    'j/k',
+    'j/k/l',
+    'm',
+    'm/n',
+    'm/n/o',
+  ]
 
-  test("restore fs.readdir", function (t) {
-    // Restore fs.readdir
-    fs.readdir = readdir
+  dirs.forEach(d => t.test(`verify ${d}`, t => {
+    t.match(fs.statSync(`${dir}/${d}`), {
+      uid: curUid,
+      gid: groups[0],
+    })
+    t.match(fs.statSync(`${dir}/${d}/f1`), {
+      uid: curUid,
+      gid: groups[0],
+    })
+    const st = fs.statSync(`${dir}/${d}/d1`)
+    t.equal(st.isFile(), true, 'd1 turned into a file')
+    t.match(st, {
+      uid: curUid,
+      gid: groups[0],
+    })
+    t.throws(() => fs.statSync(`${dir}/${d}/f2`))
+    t.throws(() => fs.statSync(`${dir}/${d}/d2`))
     t.end()
-  })
-
-  dirs.forEach(function (dir) {
-    test("verify "+dir, function (t) {
-      fs.stat(dir, function (er, st) {
-        if (er) {
-          t.ifError(er)
-          return t.end()
-        }
-        t.equal(st.uid, curUid, "uid should be " + curUid)
-        t.equal(st.gid, groups[0], "gid should be "+groups[0])
-        t.end()
-      })
-    })
-  })
-
-  files.forEach(function (f) {
-    test("verify "+f, function (t) {
-      fs.stat(f, function (er, st) {
-        if (er) {
-          if (er.code !== 'ENOENT')
-            t.ifError(er)
-          return t.end()
-        }
-        t.equal(st.uid, curUid, "uid should be " + curUid)
-        t.equal(st.gid, groups[0], "gid should be "+groups[0])
-        t.end()
-      })
-    })
-  })
-
-  test("cleanup", function (t) {
-    rimraf("/tmp/chownr/", function (er) {
-      t.ifError(er)
-      t.end()
-    })
-  })
-}
-
+  }))
+  t.end()
+})
