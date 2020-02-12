@@ -25,5 +25,8 @@
     "postversion": "npm publish",
     "prepublishOnly": "git push origin --follow-tags"
   },
-  "license": "ISC"
+  "license": "ISC",
+  "engines": {
+    "node": ">=10"
+  }
 }
