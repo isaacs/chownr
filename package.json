@@ -14,7 +14,7 @@
   "devDependencies": {
     "mkdirp": "0.3",
     "rimraf": "^2.7.1",
-    "tap": "^14.10.6"
+    "tap": "^15.1.6"
   },
   "tap": {
     "check-coverage": true
