@@ -1,10 +1,10 @@
 # ignore most things, include some others
 /*
 /.*
-
+!.tshy
+!tsconfig.json
+!src/
 !bin/
-!lib/
-!docs/
 !package.json
 !package-lock.json
 !README.md
@@ -19,6 +19,4 @@
 !.gitignore
 !.gitattributes
 !coverage-map.js
-!index.js
-!map.js
 !.github/

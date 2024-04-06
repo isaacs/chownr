@@ -2,16 +2,14 @@ if (!process.getuid || !process.getgid) {
   throw new Error("Tests require getuid/getgid support")
 }
 
+import { exec } from 'child_process'
+import fs from 'fs'
+import t from 'tap'
+import { chownrSync } from '../dist/esm/index.js'
+
 const curUid = +process.getuid()
 const curGid = +process.getgid()
-const chownr = require("../")
-const t = require("tap")
-const mkdirp = require("mkdirp")
-const rimraf = require("rimraf")
-const fs = require("fs")
 
-// sniff the 'id' command for other groups that i can legally assign to
-const {exec} = require("child_process")
 let groups
 
 t.test('get the ids to use', { bail: true }, t => {
@@ -35,7 +33,7 @@ t.test('run test', t => {
 
   t.test("should complete successfully", t => {
     // console.error("calling chownr", curUid, groups[0], typeof curUid, typeof groups[0])
-    chownr.sync(dir, curUid, groups[0])
+    chownrSync(dir, curUid, groups[0])
     t.end()
   })
 
