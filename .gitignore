@@ -3,6 +3,7 @@
 /.*
 !.tshy
 !tsconfig.json
+!typedoc.json
 !src/
 !bin/
 !package.json
